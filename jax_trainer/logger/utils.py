@@ -9,7 +9,7 @@ import jax.numpy as jnp
 import matplotlib.pyplot as plt
 from absl import logging
 from ml_collections import ConfigDict
-from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
+# from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 
 from jax_trainer.utils import class_to_name
 
@@ -65,7 +65,10 @@ def get_logging_dir(logger_config: ConfigDict, full_config: ConfigDict):
         else:
             model_name = logger_config.model_log_dir
         log_dir = os.path.join(base_log_dir, model_name)
-        if logger_config.get("logger_name", None) is not None and logger_config.logger_name != "":
+        if (
+            logger_config.get("logger_name", None) is not None
+            and logger_config.logger_name != ""
+        ):
             log_dir = os.path.join(log_dir, logger_config.logger_name)
             version = ""
         else:
@@ -89,28 +92,28 @@ def build_tool_logger(logger_config: ConfigDict, full_config: ConfigDict):
     log_dir, version = get_logging_dir(logger_config, full_config)
     # Create logger object
     logger_type = logger_config.get("tool", "TensorBoard").lower()
-    if logger_type == "tensorboard":
-        logger = TensorBoardLogger(save_dir=log_dir, version=version, name="")
-        hparams = flatten_configdict(full_config)
-        hparams = jax.tree_map(class_to_name, hparams)
-        logger.log_hyperparams(hparams)
-    elif logger_type == "wandb":
-        if version is None:
-            version = time.strftime("%Y%m%d-%H%M%S")
-            # Add random string to make sure the version is unique
-            config_string = str(full_config.to_dict())
-            version += "-" + str(abs(hash(config_string)) % (10 ** 12))
-        dict_config = full_config.to_dict()
-        dict_config["checkpoint_log_dir"] = log_dir
-        dict_config["checkpoint_version"] = version
-        logger = WandbLogger(
-            name=logger_config.get("wandb_name", None),
-            project=logger_config.get("project_name", None),
-            save_dir=log_dir,
-            version=version,
-            config=dict_config,
-            log_model=False,
-        )
-    else:
-        raise ValueError(f"Unknown logger type {logger_type}.")
-    return logger
+    # if logger_type == "tensorboard":
+    #     logger = TensorBoardLogger(save_dir=log_dir, version=version, name="")
+    #     hparams = flatten_configdict(full_config)
+    #     hparams = jax.tree_map(class_to_name, hparams)
+    #     logger.log_hyperparams(hparams)
+    # elif logger_type == "wandb":
+    #     if version is None:
+    #         version = time.strftime("%Y%m%d-%H%M%S")
+    #         # Add random string to make sure the version is unique
+    #         config_string = str(full_config.to_dict())
+    #         version += "-" + str(abs(hash(config_string)) % (10**12))
+    #     dict_config = full_config.to_dict()
+    #     dict_config["checkpoint_log_dir"] = log_dir
+    #     dict_config["checkpoint_version"] = version
+    #     logger = WandbLogger(
+    #         name=logger_config.get("wandb_name", None),
+    #         project=logger_config.get("project_name", None),
+    #         save_dir=log_dir,
+    #         version=version,
+    #         config=dict_config,
+    #         log_model=False,
+    #     )
+    # else:
+    raise ValueError(f"Unknown logger type {logger_type}.")
+    # return logger

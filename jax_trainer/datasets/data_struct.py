@@ -1,13 +1,10 @@
-from typing import Iterable, Optional, SupportsIndex
+from typing import Optional
 
 import jax.numpy as jnp
 import numpy as np
-import torch.utils.data as data
 from flax.struct import dataclass
 from ml_collections import ConfigDict
-
-Dataset = data.Dataset | SupportsIndex
-DataLoader = data.DataLoader | Iterable
+from datasets import Dataset
 
 
 @dataclass
@@ -18,9 +15,9 @@ class DatasetModule:
     train: Optional[Dataset]
     val: Optional[Dataset]
     test: Optional[Dataset]
-    train_loader: Optional[DataLoader]
-    val_loader: Optional[DataLoader]
-    test_loader: Optional[DataLoader]
+    # train_loader: Optional[Dataset]
+    # val_loader: Optional[Dataset]
+    # test_loader: Optional[Dataset]
     metadata: Optional[dict] = None
 
 

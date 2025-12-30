@@ -11,7 +11,7 @@ For an example usage, see our [template repository](https://github.com/phlippe/j
 In future, the package will be available on PyPI. For now, you can install it from source:
 
 ```bash
-git clone https://github.com/phlippe/jax_trainer.git
+git clone https://github.com/ndepalma/jax_trainer.git
 cd jax_trainer
 pip install -e .
 ```

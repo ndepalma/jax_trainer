@@ -8,11 +8,10 @@ import jax
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
 from absl import logging
 from flax.core import FrozenDict
 from ml_collections import ConfigDict
-from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
+# from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 
 from jax_trainer.logger.enums import LogFreq, LogMetricMode, LogMode
 from jax_trainer.logger.metrics import HostMetrics, Metrics, get_metrics
@@ -209,7 +208,9 @@ class Logger:
             in this epoch will be returned as a separate dict.
         """
         self.log_epoch_scalar("time", time.time() - self.epoch_start_time)
-        metrics, epoch_metrics = get_metrics(metrics, log_freq=LogFreq.EPOCH, reset_metrics=True)
+        metrics, epoch_metrics = get_metrics(
+            metrics, log_freq=LogFreq.EPOCH, reset_metrics=True
+        )
         epoch_metrics.update(self.epoch_metrics)
         final_epoch_metrics = self._finalize_metrics(metrics=epoch_metrics)
         self.log_metrics(
@@ -244,7 +245,9 @@ class Logger:
           metrics: A dictionary of metrics to save in the file.
         """
         metrics = {
-            k: metrics[k] for k in metrics if isinstance(metrics[k], (int, float, str, bool))
+            k: metrics[k]
+            for k in metrics
+            if isinstance(metrics[k], (int, float, str, bool))
         }
         with open(os.path.join(self.log_dir, f"metrics/{filename}.json"), "w") as f:
             json.dump(metrics, f, indent=4)
@@ -253,7 +256,7 @@ class Logger:
         self,
         key: str,
         image: jnp.ndarray,
-        step: int = None,
+        step: int | None = None,
         log_postfix: str = "",
         logging_mode: Optional[str] = None,
     ):
@@ -271,23 +274,25 @@ class Logger:
             logging_mode = self.logging_mode
         if isinstance(image, jnp.ndarray):
             image = jax.device_get(image)
-        if isinstance(self.logger, TensorBoardLogger):
-            self.logger.experiment.add_image(
-                tag=f"{logging_mode}/{key}{log_postfix}",
-                img_tensor=image,
-                global_step=step,
-                dataformats="HWC",
-            )
-        elif isinstance(self.logger, WandbLogger):
-            self.logger.log_image(key=f"{logging_mode}/{key}{log_postfix}", images=[image], step=step)
-        else:
-            raise ValueError(f"Unknown logger {self.logger}.")
+        # if isinstance(self.logger, TensorBoardLogger):
+        #     self.logger.experiment.add_image(
+        #         tag=f"{logging_mode}/{key}{log_postfix}",
+        #         img_tensor=image,
+        #         global_step=step,
+        #         dataformats="HWC",
+        #     )
+        # elif isinstance(self.logger, WandbLogger):
+        #     self.logger.log_image(
+        #         key=f"{logging_mode}/{key}{log_postfix}", images=[image], step=step
+        #     )
+        # else:
+        raise ValueError(f"Unknown logger {self.logger}.")
 
     def log_figure(
         self,
         key: str,
         figure: plt.Figure,
-        step: int = None,
+        step: int | None = None,
         log_postfix: str = "",
         logging_mode: Optional[str] = None,
     ):
@@ -303,20 +308,24 @@ class Logger:
             step = self.full_step_counter
         if logging_mode is None:
             logging_mode = self.logging_mode
-        if isinstance(self.logger, TensorBoardLogger):
-            self.logger.experiment.add_figure(
-                tag=f"{logging_mode}/{key}{log_postfix}", figure=figure, global_step=step
-            )
-        elif isinstance(self.logger, WandbLogger):
-            self.logger.experiment.log({f"{logging_mode}/{key}{log_postfix}": figure}, step=step)
-        else:
-            raise ValueError(f"Unknown logger {self.logger}.")
+        # if isinstance(self.logger, TensorBoardLogger):
+        #     self.logger.experiment.add_figure(
+        #         tag=f"{logging_mode}/{key}{log_postfix}",
+        #         figure=figure,
+        #         global_step=step,
+        #     )
+        # elif isinstance(self.logger, WandbLogger):
+        #     self.logger.experiment.log(
+        #         {f"{logging_mode}/{key}{log_postfix}": figure}, step=step
+        #     )
+        # else:
+        raise ValueError(f"Unknown logger {self.logger}.")
 
     def log_embedding(
         self,
         key: str,
         encodings: np.ndarray,
-        step: int = None,
+        step: int | None = None,
         metadata: Optional[Any] = None,
         images: Optional[np.ndarray] = None,
         log_postfix: str = "",
@@ -334,20 +343,20 @@ class Logger:
             step = self.full_step_counter
         if logging_mode is None:
             logging_mode = self.logging_mode
-        if isinstance(self.logger, TensorBoardLogger):
-            images = np.transpose(images, (0, 3, 1, 2))  # (N, H, W, C) -> (N, C, H, W)
-            images = torch.from_numpy(images)
-            self.logger.experiment.add_embedding(
-                tag=f"{logging_mode}/{key}{log_postfix}",
-                mat=encodings,
-                metadata=metadata,
-                label_img=images,
-                global_step=step,
-            )
-        elif isinstance(self.logger, WandbLogger):
-            logging.warning("Embedding logging not implemented for Weights and Biases.")
-        else:
-            raise ValueError(f"Unknown logger {self.logger}.")
+        # if isinstance(self.logger, TensorBoardLogger):
+        #     images = np.transpose(images, (0, 3, 1, 2))  # (N, H, W, C) -> (N, C, H, W)
+        #     images = torch.from_numpy(images)
+        #     self.logger.experiment.add_embedding(
+        #         tag=f"{logging_mode}/{key}{log_postfix}",
+        #         mat=encodings,
+        #         metadata=metadata,
+        #         label_img=images,
+        #         global_step=step,
+        #     )
+        # elif isinstance(self.logger, WandbLogger):
+        #     logging.warning("Embedding logging not implemented for Weights and Biases.")
+        # else:
+        raise ValueError(f"Unknown logger {self.logger}.")
 
     @property
     def log_dir(self):

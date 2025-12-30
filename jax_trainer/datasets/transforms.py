@@ -1,6 +1,6 @@
 from functools import partial
 from typing import Any, Union
-
+import datasets
 import numpy as np
 
 
@@ -20,7 +20,9 @@ def image_to_numpy(img: Any):
     return img
 
 
-def normalize_transform(mean: Union[np.ndarray, float] = 0.0, std: Union[np.ndarray, float] = 1.0):
+def normalize_transform(
+    mean: Union[np.ndarray, float] = 0.0, std: Union[np.ndarray, float] = 1.0
+):
     """Normalization transform on numpy arrays.
 
     Args:
@@ -49,3 +51,19 @@ def normalize(x: np.ndarray, mean: np.ndarray = 0.0, std: np.ndarray = 1.0):
         Normalized array.
     """
     return (x - mean.astype(x.dtype)) / std.astype(x.dtype)
+
+
+def normalize_ds(ds: datasets.Dataset) -> datasets.Dataset:
+    """Calculate mean and std on train data."""
+    all_images = ds["image"]
+
+    float_stack = np.array(all_images, dtype=np.float32)
+    mean = float_stack.mean() / 255.0
+    std = float_stack.std() / 255.0
+    norm_images = (float_stack - mean) / std
+
+    # make it into a chunked array and create a new column for it.
+    normed_images_chunked = datasets.Dataset.from_dict({"conv": norm_images}).data[
+        "conv"
+    ]
+    return datasets.Dataset(ds.data.append_column("n_images", normed_images_chunked))
