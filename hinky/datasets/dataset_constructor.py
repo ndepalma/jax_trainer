@@ -1,6 +1,5 @@
 """Construct a dataset from the dataset specifications."""
 
-
 import io
 import logging
 from functools import partial
@@ -12,7 +11,13 @@ from numba import njit
 from numpy.typing import NDArray
 from PIL import Image
 
-from hinky.datasets.data_struct import DatasetModule, PermissibleHFTables, PrepareDatasetConfig
+from hinky.datasets.data_struct import (
+  DatasetModule,
+  NormalizeImageTransform,
+  PadResizeImageTransform,
+  PermissibleHFTables,
+  PrepareDatasetConfig,
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -32,12 +37,21 @@ def _normalize_ds(image_tensor: NDArray) -> NDArray:
     normalized_image_np[beg:end] = __normalize_image(image_tensor[beg:end])
   return normalized_image_np
 
-def normalize_ds(ds: PermissibleHFTables) -> PermissibleHFTables:
-  """Calculate mean and std on train data."""
-  np_ro_data_in = ds["image"].combine_chunks().to_numpy_ndarray()
-  _ = _normalize_ds(np_ro_data_in)
+def _PIL_to_numpy_stack(binary_array: pa.BinaryArray):
+  """Reads a list binary encoded images into numpy array."""
+  numpy_stack = [np.array(Image.open(io.BytesIO(binary_array[i].as_buffer().to_pybytes()))) for i in range(len(binary_array))]
+  return np.stack(numpy_stack)
 
-  return ds
+def normalize_ds(ds: PermissibleHFTables) -> InMemoryTable:
+  """Calculate mean and std on train data."""
+  np_ro_data_in = _PIL_to_numpy_stack(ds["image"].combine_chunks().field(0))
+  n_images = _normalize_ds(np_ro_data_in)
+  arrow_image_array = pa.FixedShapeTensorArray.from_numpy_ndarray(n_images)
+
+  table_out = ds.table
+
+  table_out = table_out.append_column("n_image", arrow_image_array)
+  return InMemoryTable(table=table_out)
 
 def _pad_and_resize_image(image_in: dict[str, bytes | str], desired_square_resolution: int) -> tuple[np.ndarray, list[float]]:
   pil_image = Image.open(io.BytesIO(image_in["bytes"])) # pyrefly: ignore [bad-argument-type]
@@ -97,26 +111,27 @@ def process_dataset(dataset: DatasetModule, process_config: PrepareDatasetConfig
   tbl_test = dataset.test
   tbl_val = dataset.val
 
-  # Ensure the size of the images are consistent and pad them if necessary. This is required for batching.
-  if process_config.pad_and_resize:
-    tbl_train = pad_and_resize_image(tbl_train, process_config.desired_square_resolution, "training set")
-    tbl_test = pad_and_resize_image(tbl_test, process_config.desired_square_resolution, "test set")
-    tbl_val = (
-      pad_and_resize_image(tbl_val, process_config.desired_square_resolution, "val set")
-      if tbl_val is not None
-      else None
-    )
+  for trsfm_spec in process_config.image_transforms:
+    if isinstance(trsfm_spec, PadResizeImageTransform) and trsfm_spec.pad_resize:
+      # Ensure the size of the images are consistent and pad them if necessary. This is required for batching.
+      desired_resolution = trsfm_spec.desired_square_resolution
+      tbl_train = pad_and_resize_image(tbl_train, desired_resolution, "training set")
+      tbl_test = pad_and_resize_image(tbl_test, desired_resolution, "test set")
+      tbl_val = (
+        pad_and_resize_image(tbl_val, desired_resolution, "val set")
+        if tbl_val is not None
+        else None
+      )
+    if isinstance(trsfm_spec, NormalizeImageTransform) and trsfm_spec.normalize_column:
+      # Normalize the images
+      tbl_train = normalize_ds(tbl_train)
+      tbl_test = normalize_ds(tbl_test)
 
-  # Normalize the images
-  if process_config.normalize_column:
-    tbl_train = normalize_ds(tbl_train)
-    tbl_test = normalize_ds(tbl_test)
-
-    tbl_val = (
-      normalize_ds(tbl_val)
-      if tbl_val is not None
-      else None
-    )
+      tbl_val = (
+        normalize_ds(tbl_val)
+        if tbl_val is not None
+        else None
+      )
 
   return DatasetModule(
     config=dataset.config,
@@ -124,20 +139,3 @@ def process_dataset(dataset: DatasetModule, process_config: PrepareDatasetConfig
     test=tbl_test,
     val=tbl_val,
   )
-
-# def build_huggingface_dataset(dataset_config: FullDatasetSpecification) -> DatasetModule:
-#   """Get a dataset from huggingface."""
-#   initial_dataset = get_dataset(
-#     source_config=dataset_config.training_params, 
-#     input_dir=dataset_config.source.cache_path if isinstance(dataset_config.source, CachedDatasetConfig) else None,
-#     )
-#   if dataset_config.training_params.limit_to is not None:
-#     ds_train = tbl_train.take(dataset_config.training_params.limit_to)
-#     ds_test = tbl_test.take(dataset_config.training_params.limit_to)
-#     if tbl_val is not None:
-#       ds_validation = tbl_val.take(dataset_config.training_params.limit_to)
-#   minified_dataset = DatasetModule(
-#     train=ds_train.
-#   )
-#   processed_dataset = process_dataset(initial_dataset, dataset_config.preparation)
-#   return processed_dataset

@@ -22,12 +22,24 @@ class DatasetModule(BaseModel, Generic[ConfigType, TableType]):
   val: TableType | None = None
   metadata: dict | None = None
 
+class DatasetTransform(BaseModel): 
+  columns_req: list[str] = []
+  columns_added: list[str] = []
+
+class NormalizeImageTransform(DatasetTransform):
+  normalize_column: bool = False
+  columns_req: list[str] = ["image"]
+  columns_added: list[str] = ["n_image"]
+
+class PadResizeImageTransform(DatasetTransform):
+  pad_resize: bool = False
+  desired_square_resolution: int = 200
+  columns_req: list[str] = ["image"]
+  columns_added: list[str] = ["params"]
 
 class PrepareDatasetConfig(BaseModel):
-  normalize_column: bool = False
   create_validation_set: bool = False
-  desired_square_resolution: int = 200
-  pad_and_resize: bool = False
+  image_transforms: list[NormalizeImageTransform | PadResizeImageTransform] = []
 
 class HuggingFaceDatasetConfig(BaseModel):
   hf_dataset_uri: str
@@ -42,5 +54,5 @@ class TrainingDatasetConfig(BaseModel):
 
 class FullDatasetSpecification(BaseModel):
   source: HuggingFaceDatasetConfig | CachedDatasetConfig
-  preparation: PrepareDatasetConfig
+  preparation: PrepareDatasetConfig = Field(default_factory=PrepareDatasetConfig)
   training_params: TrainingDatasetConfig

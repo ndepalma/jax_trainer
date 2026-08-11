@@ -76,6 +76,12 @@ class TrainerConfig(BaseModel):
     True,
     description="If True, donates the train state to the jitted training step to avoid copies.",
   )
+
+  epoch_as_episode: bool = Field(
+    False,
+    description="If True, performs forward evaluation to build a replay buffer.",
+  )
+
   log_grad_norm: bool = Field(
     False, description="If True, logs the gradient norm during training."
   )

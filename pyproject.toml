@@ -12,7 +12,7 @@ requires-python = ">=3.10.0"
 license = "MIT"
 homepage = "https://github.com/petroglyf/hinkypunk"
 packages = [{ include = "hinky" }]
-urls = {Repository = "https://github.com/ndepalma/jax-trainer"}
+urls = {Repository = "https://github.com/petroglyf/hinkypunk"}
 
 dependencies = [
   "cyclopts (>=4.20)",
