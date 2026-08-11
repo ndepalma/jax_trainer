@@ -1,7 +1,6 @@
 # pyright: ignore[reportInvalidTypeForm]
 
 import logging
-import time
 from collections.abc import Callable, Iterator
 from typing import Any, Final, Protocol
 
@@ -132,36 +131,19 @@ class EpisodeProcessAsStep:
 
         if train_metrics is None:
           train_metrics = self.init_train_metrics(batch_data, rngs=rngs)
-        if self.total_epochs_taken == 0:
-          # Log compilation and execution time of the first batch.
-          _logger.info("Compiling train_step...")
-          start_time = time.time()
-          self.optimizer_and_model, train_metrics = self.train_step(
-            self.optimizer_and_model,
-            batch_data,
-            train_metrics,
-            rngs=rngs,
+        self.optimizer_and_model, train_metrics = self.train_step(
+          self.optimizer_and_model,
+          batch_data,
+          train_metrics,
+          rngs=rngs,
+        )
+        if train_metrics is not None and self.enable_progress_bar:
+          progress_table.update(
+            name="train loss",
+            value=train_metrics["loss_step"]["value"],
+            aggregate="mean",
+            color="blue",
           )
-          _logger.info(
-            _
-            := f"Successfully completed train_step compilation in {time.time() - start_time:.2f} seconds.",
-          )
-        else:
-          # Annotated with step number for TensorBoard profiling.
-          with jax.profiler.StepTraceAnnotation(f"train_step_{self.total_epochs_taken}"):
-            self.optimizer_and_model, train_metrics = self.train_step(
-              self.optimizer_and_model,
-              batch_data,
-              train_metrics,
-              rngs=rngs,
-            )
-            if train_metrics is not None and self.enable_progress_bar:
-              progress_table.update(
-                name="train loss",
-                value=train_metrics["loss_step"]["value"],
-                aggregate="mean",
-                color="blue",
-              )
       self.finish_episode_fn(self.optimizer_and_model.model,
         batch_as_input,
         rngs=rngs,

@@ -2,7 +2,7 @@
 
 import logging
 import os
-from collections.abc import Iterator
+from collections.abc import Iterable
 from typing import Any, Generic, TypeVar
 
 import jax
@@ -10,10 +10,11 @@ import jax.numpy as jnp
 import yaml
 from flax import nnx
 from progress_table.progress_table import ProgressTable, TableProgressBar
+from pyarrow import Table
 from pydantic import create_model
 
 from hinky.datasets import DatasetModule
-from hinky.datasets.dataset_constructor import HuggingFaceDatasetConfig
+from hinky.datasets.data_struct import FullDatasetSpecification
 from hinky.logger import ImmutableMetrics
 from hinky.logger.config import LoggerConfig
 from hinky.optimizer.config import OptimizerConfig
@@ -31,7 +32,7 @@ class TrainerModule(Generic[ModelParamsType]):
     trainer_config: TrainerConfig,
     model_config: ModelConfig[ModelParamsType],
     optimizer_config: OptimizerConfig,
-    dataset_config: HuggingFaceDatasetConfig,
+    dataset_config: FullDatasetSpecification,
     dataset: DatasetModule,
   ) -> None:
     """A basic Trainer module for logging, model initialization, training loop, and callbacks.
@@ -69,7 +70,7 @@ class TrainerModule(Generic[ModelParamsType]):
         trainer=self,
       )
 
-  def batch_to_input(self, batch: dict[str, jax.Array]) -> dict[str, Any]:
+  def batch_to_input(self, batch: Table) -> dict[str, Any]:
     raise NotImplementedError
 
   def prepare_rngs(self) -> None:
@@ -217,8 +218,8 @@ class TrainerModule(Generic[ModelParamsType]):
     raise NotImplementedError
 
   def tracker(
-    self, progress_table: ProgressTable, iterator: Iterator, desc: str,  # noqa: ARG002
-  ) -> Iterator | TableProgressBar:
+    self, progress_table: ProgressTable, iterator: Iterable, desc: str,  # noqa: ARG002
+  ) -> Iterable | TableProgressBar:
     """Wraps an iterator in a progress bar tracker (tqdm) if the progress bar is enabled.
 
     Args:
@@ -278,7 +279,6 @@ class TrainerModule(Generic[ModelParamsType]):
     Args:
         epoch_idx: Index of the training epoch that has started.
     """
-    logging.info(f"Starting training epoch {epoch_idx}")
     for callback in self.callbacks:
       callback.on_training_epoch_start(epoch_idx)
 
@@ -288,7 +288,6 @@ class TrainerModule(Generic[ModelParamsType]):
     Args:
         epoch_idx: Index of the training epoch that has finished.
     """
-    logging.info(f"Finished training epoch {epoch_idx}")
     for callback in self.callbacks:
       callback.on_training_epoch_end(train_metrics, epoch_idx)
 
@@ -298,7 +297,6 @@ class TrainerModule(Generic[ModelParamsType]):
     Args:
         epoch_idx: Index of the training epoch at which validation was started.
     """
-    logging.info(f"Starting validation epoch {epoch_idx}")
     for callback in self.callbacks:
       callback.on_validation_epoch_start(epoch_idx)
 
@@ -312,7 +310,6 @@ class TrainerModule(Generic[ModelParamsType]):
         val_loader: Data loader of the validation set, to support additional
             evaluation.
     """
-    logging.info(f"Finished validation epoch {epoch_idx}")
     for callback in self.callbacks:
       callback.on_validation_epoch_end(eval_metrics, epoch_idx)
     if (
@@ -320,7 +317,8 @@ class TrainerModule(Generic[ModelParamsType]):
       and self.trainer_config.checkpoint_config
       and epoch_idx % self.trainer_config.checkpoint_config.every_n_epochs == 0
     ):
-      self.checkpoint_manager.save_model(eval_metrics, epoch_idx)
+      # pyrefly: ignore [bad-argument-type]
+      self.checkpoint_manager.save_model(self, eval_metrics, epoch_idx)
 
   def on_test_epoch_start(self, epoch_idx: int) -> None:
     """Method called at the start of each test epoch. Can be used for additional logging or similar.
@@ -328,7 +326,6 @@ class TrainerModule(Generic[ModelParamsType]):
     Args:
         epoch_idx: Index of the training epoch at which testing was started.
     """
-    logging.info(f"Starting test epoch {epoch_idx}")
     for callback in self.callbacks:
       callback.on_test_epoch_start(epoch_idx)
 
@@ -344,7 +341,6 @@ class TrainerModule(Generic[ModelParamsType]):
         test_loader: Data loader of the test set, to support additional
             evaluation.
     """
-    logging.info(f"Finished test epoch {epoch_idx}")
     for callback in self.callbacks:
       callback.on_test_epoch_end(test_metrics, epoch_idx)
 

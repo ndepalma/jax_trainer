@@ -15,7 +15,6 @@ from typing import Any
 import altair as alt
 import jax
 import jax.numpy as jnp
-import numpy as np
 from absl import logging
 
 from hinky.logger.config import LoggerConfig
@@ -77,7 +76,7 @@ class Logger:
     metrics_to_log = {}
     for metric_key in metrics:
       metric_value = metrics[metric_key]
-      if isinstance(metric_value, (jnp.ndarray, np.ndarray)):
+      if isinstance(metric_value, jax.Array):
         if metric_value.size == 1:
           metric_value = metric_value.item()
         else:
@@ -92,7 +91,7 @@ class Logger:
   def log_scalar(
     self,
     metric_key: str,
-    metric_value: float | np.ndarray,
+    metric_value: float | jax.Array,
     step: int,
     log_postfix: str = "",
   ) -> None:
@@ -189,11 +188,7 @@ class Logger:
       final_metrics[save_key] = metrics[key]
     for key in final_metrics:  # noqa: PLC0206
       val = final_metrics[key]
-      val = (
-        val.item()
-        if isinstance(val, (jnp.ndarray, np.ndarray)) and val.size == 1
-        else val
-      )
+      val = val.item() if isinstance(val, jax.Array) and val.size == 1 else val
       final_metrics[key] = val
     return final_metrics
 
@@ -323,10 +318,10 @@ class Logger:
   def log_embedding(
     self,
     key: str,
-    encodings: np.ndarray,
+    encodings: jax.Array,
     step: int | None = None,
     metadata: list[str] | None = None,
-    images: np.ndarray | None = None,
+    images: jax.Array | None = None,
     log_postfix: str = "",
     logging_mode: str | None = None,
   ) -> None:
@@ -347,7 +342,7 @@ class Logger:
     if logging_mode is None:
       logging_mode = self.logging_mode
     if images is not None:
-      images = np.transpose(images, (0, 3, 1, 2))  # (N, H, W, C) -> (N, C, H, W)
+      images = jnp.transpose(images, (0, 3, 1, 2))  # (N, H, W, C) -> (N, C, H, W)
     self.logger.log_embedding(
       tag=f"{logging_mode}/{key}{log_postfix}",
       mat=encodings,

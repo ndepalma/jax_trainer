@@ -1,17 +1,13 @@
 import unittest
 
-from hinky.datasets import DatasetModule, build_dataset_module
-from hinky.datasets.dataset_constructor import HuggingFaceDatasetConfig
+from hinky.datasets import DatasetModule, HuggingFaceDatasetConfig, get_dataset
 
 
 class TestBuildDatasets(unittest.TestCase):
     @unittest.skip("Requires network access and HuggingFace dataset download")
     def test_build_dataset(self):
-        config = HuggingFaceDatasetConfig(
-            hf_dataset_uri="cifar10",
-            batch_size=128,
-        )
-        dataset_module = build_dataset_module(config)
+        config = HuggingFaceDatasetConfig(hf_dataset_uri="cifar10")
+        dataset_module = get_dataset(config)
         self.assertIsInstance(dataset_module, DatasetModule)
         for split in [dataset_module.train, dataset_module.val, dataset_module.test]:
             if split is None:

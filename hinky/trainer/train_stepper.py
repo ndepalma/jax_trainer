@@ -6,6 +6,7 @@ merges the resulting step metrics (optionally including gradient norms) into
 the running metrics dict via hinky.logger.update_metrics.
 """
 
+import logging
 from collections.abc import Callable
 from typing import Final
 
@@ -21,6 +22,7 @@ from hinky.logger import (
   update_metrics,
 )
 
+_logger = logging.getLogger(__name__)
 LossFnType = Callable[
   [nnx.Module, dict[str, jax.Array], nnx.Rngs, bool], tuple[jax.Array, ImmutableMetrics],
 ]

@@ -5,6 +5,8 @@ from pathlib import Path
 import io
 
 import altair as alt
+import jax
+import jax.numpy as jnp
 import numpy as np
 from PIL import Image
 from tensorboard import default, program
@@ -55,13 +57,13 @@ class TensorBoardLogger(LoggerType):
   def log_image(
     self,
     tag: str,
-    image: np.ndarray,
+    image: jax.Array,
     global_step: int,
     dataformats: str = "CHW",
   ) -> None:
     if dataformats == "HWC":
-      image = np.transpose(image, (2, 0, 1))  # (H, W, C) -> (C, H, W)
-    self.writer.add_image(tag, image, global_step)
+      image = jnp.transpose(image, (2, 0, 1))  # (H, W, C) -> (C, H, W)
+    self.writer.add_image(tag, np.asarray(image), global_step)
 
   def log_figure(
     self,
@@ -79,15 +81,15 @@ class TensorBoardLogger(LoggerType):
   def log_embedding(
     self,
     tag: str,
-    mat: np.ndarray,
+    mat: jax.Array,
     metadata: list[str] | None,
-    label_img: np.ndarray | None,
+    label_img: jax.Array | None,
     global_step: int,
   ) -> None:
     self.writer.add_embedding(
-      mat,
+      np.asarray(mat),
       metadata=metadata,
-      label_img=label_img,
+      label_img=np.asarray(label_img) if label_img is not None else None,
       global_step=global_step,
       tag=tag,
     )
