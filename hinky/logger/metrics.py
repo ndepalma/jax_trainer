@@ -4,7 +4,6 @@ from typing import Any, cast
 
 import jax
 import jax.numpy as jnp
-import numpy as np
 from flax.core.frozen_dict import FrozenDict, freeze, unfreeze
 
 from hinky.logger.enums import LogFreq, LogMetricMode, LogMode
@@ -25,7 +24,7 @@ StepMetrics = dict[
 # Combined types.
 Metrics = ImmutableMetrics | MutableMetrics
 # Metrics on host (for logging).
-HostMetricElement = float | int | np.ndarray
+HostMetricElement = float | int | jax.Array
 HostMetrics = dict[str, HostMetricElement]
 
 
@@ -183,7 +182,11 @@ def get_metrics(
       elif host_metrics[key]["mode"] == LogMetricMode.STD:
         value = value / count
         value2 = host_metrics[key]["value2"] / count
-        value = np.sqrt(value2 - value**2)
+        value = jnp.sqrt(value2 - value**2)
+      # jax.device_get() materializes array leaves as numpy; normalize back to jax.Array
+      # so HostMetrics values match their declared type at runtime.
+      if not isinstance(value, (int, float)):
+        value = jnp.asarray(value)
       metrics[host_key] = value
       if reset_metrics:
         global_metrics[key]["value"] = jnp.zeros_like(cast(jax.Array, global_metrics[key]["value"]))

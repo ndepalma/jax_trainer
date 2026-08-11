@@ -1,10 +1,11 @@
 import logging
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Sequence
 from itertools import chain
 from typing import Any
 
 import jax
-import numpy as np
+import jax.numpy as jnp
+import pyarrow as pa
 from flax import nnx
 from progress_table.progress_table import ProgressTable
 
@@ -29,7 +30,7 @@ def _eval_model(
     ImmutableMetrics,
   ],
   trainer: TrainerModule[Any],
-  val_loader: Iterator,
+  val_loader: Sequence[pa.RecordBatch],
   mode: str,
   epoch_idx: int,
   *,
@@ -63,7 +64,7 @@ def _eval_model(
       trainer.state,
       trainer.batch_to_input(batch),
       eval_metrics,
-      rngs=rngs,
+      rngs,
     )
     step_count += 1
   if step_count == 0:
@@ -162,7 +163,7 @@ def train_model(
       nan_keys = trainer.trainer_config.nan_keys
       if isinstance(nan_keys, str):
         nan_keys = (nan_keys,)
-      if any(np.isnan(epoch_metrics.get(key, 0.0)).any() for key in nan_keys):
+      if any(jnp.isnan(epoch_metrics.get(key, 0.0)).any() for key in nan_keys):
         _logger.error(
           _ := f"NaN detected in epoch metrics of epoch {epoch_idx}. Aborting training.",
         )
@@ -192,7 +193,7 @@ def train_model(
       if trainer.trainer_config.enable_progress_bar:
         progress_table.update(
           name="valid loss",
-          value=loss.mean(),
+          value=jnp.mean(loss),
           color="red",
         )
 

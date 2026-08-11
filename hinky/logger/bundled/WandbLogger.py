@@ -1,9 +1,13 @@
 """WandbLogger implementation for JAX Trainer."""
 import io
 import logging
+from collections.abc import Iterable
 from pathlib import Path
+from typing import Any
 
 import altair as alt
+import jax
+import jax.numpy as jnp
 import numpy as np
 import wandb
 from PIL import Image
@@ -48,13 +52,13 @@ class WandbLogger(LoggerType):
   def log_image(
     self,
     tag: str,
-    image: np.ndarray,
+    image: jax.Array,
     global_step: int,
     dataformats: str = "CHW",
   ) -> None:
     if dataformats == "CHW":
-      image = np.transpose(image, (1, 2, 0))  # (C, H, W) -> (H, W, C)
-    self.run.log({tag: wandb.Image(image)}, step=global_step)
+      image = jnp.transpose(image, (1, 2, 0))  # (C, H, W) -> (H, W, C)
+    self.run.log({tag: wandb.Image(np.asarray(image))}, step=global_step)
 
   def log_figure(
     self,
@@ -71,25 +75,25 @@ class WandbLogger(LoggerType):
   def log_embedding(
     self,
     tag: str,
-    mat: np.ndarray,
+    mat: jax.Array,
     metadata: list[str] | None,
-    label_img: np.ndarray | None,
+    label_img: jax.Array | None,
     global_step: int,
   ) -> None:
-    columns: list[str] = []
+    columns: list[str | int] = []
     if metadata is not None:
       columns.append("metadata")
     if label_img is not None:
       columns.append("image")
     columns.extend(f"e{i}" for i in range(mat.shape[1]))
 
-    rows: list[list[object]] = []
+    rows: list[Iterable[Any]] = []
     for i, vec in enumerate(mat):
       row: list[object] = []
       if metadata is not None:
         row.append(metadata[i])
       if label_img is not None:
-        row.append(wandb.Image(label_img[i]))
+        row.append(wandb.Image(np.asarray(label_img[i])))
       row.extend(vec.tolist())
       rows.append(row)
 
