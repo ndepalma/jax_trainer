@@ -1,9 +1,9 @@
 """Callbacks for classification tasks, including confusion matrix visualization."""
 import logging
+from itertools import product
 from typing import Any
 
 import altair as alt
-import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
 
@@ -103,10 +103,10 @@ class ConfusionMatrixCallback(Callback):
       conf_matrix = conf_matrix / conf_matrix.sum(axis=1, keepdims=True)
     n = conf_matrix.shape[0]
     labels = self.class_names or [str(i) for i in range(n)]
-    rows, cols = np.meshgrid(range(n), range(n), indexing="ij")
+    row_idxs, col_idxs = zip(*product(range(n), range(n)), strict=True)
     df = pd.DataFrame({
-      "True": [labels[i] for i in rows.flatten()],
-      "Predicted": [labels[j] for j in cols.flatten()],
+      "True": [labels[i] for i in row_idxs],
+      "Predicted": [labels[j] for j in col_idxs],
       "value": conf_matrix.flatten().tolist(),
     })
     width = self.cf_config.figsize[0] * self.cf_config.dpi

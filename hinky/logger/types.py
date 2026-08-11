@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 import altair as alt
-import numpy as np
+import jax
 
 from hinky.logger.metrics import HostMetrics
 
@@ -44,7 +44,7 @@ class LoggerType(ABC):
   def log_image(
     self,
     tag: str,
-    image: np.ndarray,
+    image: jax.Array,
     global_step: int,
     dataformats: str = "CHW",
   ) -> None:
@@ -52,7 +52,7 @@ class LoggerType(ABC):
 
     Args:
         key: The key under which to log the image.
-        image: The image to log, as a NumPy array.
+        image: The image to log.
         global_step: The current training step.
         dataformats: The data format of the image (e.g., "CHW", "HWC").
         log_postfix: An optional postfix to append to the tag.
@@ -80,16 +80,16 @@ class LoggerType(ABC):
   def log_embedding(
     self,
     tag: str,
-    mat: np.ndarray,
+    mat: jax.Array,
     metadata: list[str] | None,
-    label_img: np.ndarray | None,
+    label_img: jax.Array | None,
     global_step: int,
   ) -> None:
     """Logs an embedding.
 
     Args:
         key: The key under which to log the embedding.
-        mat: The embedding matrix to log, as a NumPy array.
+        mat: The embedding matrix to log.
         metadata: A list of metadata strings corresponding to each embedding vector.
         label_img: An array of images corresponding to each embedding vector, for visualization.
         global_step: The current training step.

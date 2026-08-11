@@ -2,7 +2,7 @@
 
 import logging
 import os
-from collections.abc import Iterator
+from collections.abc import Iterable
 from typing import Any, Generic, TypeVar
 
 import jax
@@ -218,8 +218,8 @@ class TrainerModule(Generic[ModelParamsType]):
     raise NotImplementedError
 
   def tracker(
-    self, progress_table: ProgressTable, iterator: Iterator, desc: str,  # noqa: ARG002
-  ) -> Iterator | TableProgressBar:
+    self, progress_table: ProgressTable, iterator: Iterable, desc: str,  # noqa: ARG002
+  ) -> Iterable | TableProgressBar:
     """Wraps an iterator in a progress bar tracker (tqdm) if the progress bar is enabled.
 
     Args:
@@ -317,7 +317,8 @@ class TrainerModule(Generic[ModelParamsType]):
       and self.trainer_config.checkpoint_config
       and epoch_idx % self.trainer_config.checkpoint_config.every_n_epochs == 0
     ):
-      self.checkpoint_manager.save_model(eval_metrics, epoch_idx)
+      # pyrefly: ignore [bad-argument-type]
+      self.checkpoint_manager.save_model(self, eval_metrics, epoch_idx)
 
   def on_test_epoch_start(self, epoch_idx: int) -> None:
     """Method called at the start of each test epoch. Can be used for additional logging or similar.
