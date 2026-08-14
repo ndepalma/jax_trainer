@@ -17,6 +17,7 @@ from hinky.logger import (
 )
 
 from .episode_stepper import EpisodeProcessAsStep
+from .epoch_trainer import EpochStep
 from .eval_stepper import EvalStep
 from .train_stepper import TrainStep
 from .trainer import TrainerModule
@@ -124,18 +125,30 @@ def train_model(
   train_step_call, eval_step_call, eval_step = _get_step_fns(
     trainer, not trainer.trainer_config.debug
   )
-  epoch_trainer = EpisodeProcessAsStep(
-    trainer.tracker, # pyrefly: ignore [bad-argument-type]
-    trainer.logger,
-    trainer.train_step_callbacks,
-    trainer.batch_to_input,
-    trainer.on_train_step_start, # pyrefly: ignore [bad-argument-type]
-    trainer.continue_with_batch,
-    trainer.on_train_step_end, # pyrefly: ignore [bad-argument-type]
-    trainer.state,
-    train_step_call,
-    enable_progress_bar=trainer.trainer_config.enable_progress_bar,
-  )
+  epoch_trainer: EpochStep | EpisodeProcessAsStep
+  if trainer.trainer_config.epoch_as_episode:
+    epoch_trainer = EpisodeProcessAsStep(
+      trainer.tracker, # pyrefly: ignore [bad-argument-type]
+      trainer.logger,
+      trainer.train_step_callbacks,
+      trainer.batch_to_input,
+      trainer.on_train_step_start, # pyrefly: ignore [bad-argument-type]
+      trainer.continue_with_batch,
+      trainer.on_train_step_end, # pyrefly: ignore [bad-argument-type]
+      trainer.state,
+      train_step_call,
+      enable_progress_bar=trainer.trainer_config.enable_progress_bar,
+    )
+  else:
+    epoch_trainer = EpochStep(
+      trainer.tracker, # pyrefly: ignore [bad-argument-type]
+      trainer.logger,
+      trainer.train_step_callbacks,
+      trainer.batch_to_input,
+      trainer.state,
+      train_step_call,
+      enable_progress_bar=trainer.trainer_config.enable_progress_bar,
+    )
   # Prepare training loop
   trainer.on_training_start()
   if ds_tables.val:
