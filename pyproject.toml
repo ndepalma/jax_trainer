@@ -7,12 +7,9 @@ authors = [
   {name="Phillip Lippe", email="phillip.lippe@googlemail.com"}
   ]
 readme = "README.md"
-dynamic = ["version"]
 requires-python = ">=3.10.0"
 license = "MIT"
-homepage = "https://github.com/petroglyf/hinkypunk"
-packages = [{ include = "hinky" }]
-urls = {Repository = "https://github.com/petroglyf/hinkypunk"}
+urls = {Homepage = "https://github.com/petroglyf/hinkypunk", Repository = "https://github.com/petroglyf/hinkypunk"}
 
 dependencies = [
   "cyclopts (>=4.20)",
@@ -39,6 +36,7 @@ wandb = [
 
 [tool.poetry]
 requires-poetry = ">=2.4"
+packages = [{ include = "hinky" }]
 
 
 [tool.pyrefly]
@@ -49,10 +47,6 @@ project-excludes = [
     "**/*venv/**/*",
     "**/.[!/.]*/**/*",
 ]
-
-[tool.poetry.group.dev.dependencies]
-pytest = "*"
-pyrefly = ">= 1.2"
 
 [build-system]
 requires = ["poetry-core"]
